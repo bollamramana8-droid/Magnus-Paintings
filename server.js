@@ -148,7 +148,46 @@ app.get("/api/purchases/:orderId/original",userOnly,(req,res)=>{
   res.status(501).json({error:"Connect private object storage for secure original delivery."});
 });
 
-app.use(express.static(path.join(__dirname,"public")));
+
+app.get("/paintings/:slug", (req, res) => {
+  const slug = req.params.slug;
+
+  const paintings = db.prepare(
+    "SELECT * FROM paintings WHERE status='approved'"
+  ).all();
+
+  const painting = paintings.find(p =>
+    p.title.toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") === slug
+  );
+
+  if (!painting) {
+    return res.status(404).send("Painting not found");
+  }
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${painting.title} | Magnus Paintings</title>
+      <meta name="description" content="${painting.description}">
+      <meta name="keywords" content="AI paintings for sale, digital paintings, original paintings, Indian paintings online, buy AI artwork, digital art marketplace">
+    </head>
+    <body>
+      <h1>${painting.title}</h1>
+      <h2>Magnus Paintings</h2>
+<img src="/uploads/${painting.preview_file}" alt="${painting.title}" style="max-width:700px;width:100%;height:auto;border-radius:12px;">
+      <p>${painting.description}</p>
+      <p><strong>Artist:</strong> ${painting.artist}</p>
+      <p><strong>Price:</strong> ₹${(painting.price_paise / 100).toFixed(2)}</p>
+      <a href="/">← Back to Magnus Paintings</a>
+    </body>
+    </html>
+  `);
+});app.use("/uploads", express.static(path.join(__dirname, "data", "uploads")));app.use(express.static(path.join(__dirname,"public")));
 app.get("/{*splat}",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
 
 app.listen(PORT,()=>console.log(`MAGNUS PAINTINGS running on http://localhost:${PORT}`));
